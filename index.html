@@ -185,7 +185,7 @@ function showOb(edit){$('#nm').value=S.onboarded?S.name:'';$('#yr').value=S.year
 $('#go').onclick=()=>{const v=$('#nm').value.trim();if(!v){$('#nm').style.borderColor='#f55';return $('#nm').focus()}S.name=v;S.year=$('#yr').value;S.onboarded=1;save();try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}boot()};
 $('#ocx').onclick=()=>{$('#ob').style.display='none'};
 $('#chg').onclick=()=>showOb(1);
-$('#nm').onkeydown=e=>e.key==='Enter'&&$('#go').click();
+$('#nm').onkeydown=e=>{if(e.key==='Enter')$('#go').click()};
 let tl=1500,ti;const fm=()=>$('#tm').textContent=String(Math.floor(tl/60)).padStart(2,'0')+':'+String(tl%60).padStart(2,'0');
 $('#tg').onclick=()=>{if(ti){clearInterval(ti);ti=0;$('#tg').textContent='Start'}else{$('#tg').textContent='Pause';ti=setInterval(()=>{tl--;fm();if(tl<=0){clearInterval(ti);ti=0;$('#tg').textContent='Start';tl=1500;alert('Focus session done. Take a 5-min break!')}},1000)}};
 $('#tr').onclick=()=>{clearInterval(ti);ti=0;tl=1500;fm();$('#tg').textContent='Start'};
@@ -287,7 +287,7 @@ async function send(t){if(!t.trim())return;S.chat.push({role:'user',content:t});
  $('#chat').insertAdjacentHTML('beforeend','<div class="msg a dots" id="ty"><span></span><span></span><span></span></div>');$('#chat').scrollTop=1e9;
  try{const a=await api(S.chat);S.chat.push({role:'assistant',content:a})}catch(e){S.chat.push({role:'assistant',content:'⚠ '+e.message})}save();draw()}
 function ask(t){go('ai');send(t)}
-$('#cs').onclick=()=>{const v=$('#ci').value;$('#ci').value='';send(v)};$('#ci').onkeydown=e=>e.key==='Enter'&&$('#cs').click();
+$('#cs').onclick=()=>{const v=$('#ci').value;$('#ci').value='';send(v)};$('#ci').onkeydown=e=>{if(e.key==='Enter')$('#cs').click()};
 $('#qc').innerHTML=['Quiz me on anatomy','Explain with a mnemonic: cranial nerves','Viva questions: brachial plexus','Clear chat'].map(q=>`<button class="chip">${q}</button>`).join('');
 $$('#qc .chip').forEach(b=>b.onclick=()=>{if(b.textContent=='Clear chat'){S.chat=[];save();draw()}else send(b.textContent)});
 
