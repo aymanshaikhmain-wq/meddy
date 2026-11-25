@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <title>Meddy – MBBS Companion</title>
 <meta name="theme-color" content="#000000"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg">
 <style>
@@ -46,16 +47,33 @@ details p{color:#cfcfcf;margin-top:6px}
 .dots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:#888;margin:0 2px;animation:d 1s infinite}.dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
 @keyframes d{50%{opacity:.2}}
 a{color:#fff}
+
+#ob{background:radial-gradient(ellipse at 50% 0%,#202020 0%,#000 65%);overflow:auto;animation:obin .5s ease}
+@keyframes obin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.ob-logo{width:88px;height:88px;border-radius:26px;background:#fff;color:#000;display:flex;align-items:center;justify-content:center;font-size:46px;box-shadow:0 0 60px #ffffff25}
+#ob h1{font-size:42px;letter-spacing:-1.5px}
+.ob-tag{max-width:300px;font-size:16px}
+.ob-feat{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:340px}
+.ob-feat span{border:1px solid var(--b);border-radius:20px;padding:5px 12px;font-size:12px;color:#cfcfcf;background:#0c0c0c}
+.ob-card{width:100%;max-width:340px;display:flex;flex-direction:column;gap:6px;text-align:left;margin-top:6px}
+.ob-card label{font-size:12px;color:var(--m);margin-top:6px}
+#ob .ob-card input,#ob .ob-card select{width:100%;max-width:none;text-align:left;font-size:17px;padding:13px 14px;border-radius:12px;border:1px solid var(--b);background:#0c0c0c;color:#fff}
+#ob .ob-card input:focus,#ob .ob-card select:focus{outline:0;border-color:#fff}
+#go{width:100%;max-width:340px;padding:15px;font-size:16px;border-radius:14px;margin-top:8px}
+#ocx{font-size:13px;color:var(--m);cursor:pointer;text-decoration:underline}
 </style></head><body>
 
 <div id="err"></div>
-<div id="ob"><div style="font-size:48px">⚕</div><h1>Meddy</h1><p class="m">Your MBBS companion. What should I call you?</p>
-<input id="nm" type="text" placeholder="Tap here and type your name" maxlength="30" autocomplete="off" autofocus><button class="p" id="go">Start</button><p class="m" style="font-size:12px">Saved on this device only.</p></div>
+<div id="ob"><div class="ob-logo">⚕</div><h1>Meddy</h1><p class="m ob-tag">Your MBBS companion: 3D anatomy atlas, flashcards, notes and an AI tutor.</p>
+<div class="ob-feat"><span>🫀 3D Atlas</span><span>▤ Flashcards</span><span>✦ AI Tutor</span><span>✎ Notes</span></div>
+<div class="ob-card"><label for="nm">What should I call you?</label><input id="nm" type="text" placeholder="Your name" maxlength="30" autocomplete="given-name">
+<label for="yr">Your year (optional)</label><select id="yr"><option value="">Choose…</option><option>1st year MBBS</option><option>2nd year MBBS</option><option>3rd year MBBS</option><option>Final year MBBS</option><option>Intern</option><option>PG / other</option></select></div>
+<button class="p" id="go">Let’s start →</button><a id="ocx">Cancel</a><p class="m" style="font-size:12px">Saved on this device only. You’ll never be asked again.</p></div>
 
 <nav id="nav"></nav>
 <main>
 <section class="pg" id="p-home">
- <p class="m" id="hi"></p><h1 id="hn"></h1>
+ <p class="m" id="hi"></p><h1 id="hn"></h1><a id="chg" class="m" style="font-size:12px;cursor:pointer;text-decoration:underline">Edit name</a>
  <div class="grid" style="margin-top:14px">
   <div class="card"><div class="stat" id="s1">0</div><span class="m">Structures explored</span></div>
   <div class="card"><div class="stat" id="s2">0</div><span class="m">Notes</span></div>
@@ -138,8 +156,14 @@ a{color:#fff}
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const K='meddy_v1';let S;
 try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
-S=Object.assign({name:'Ayman',notes:[],seen:[],chat:[],days:[],tut:1},S||{});
+S=Object.assign({name:'',year:'',onboarded:0,notes:[],seen:[],chat:[],days:[],tut:1},S||{});
 const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});
+/* FAST MODELS: download all .glb in parallel once, share the bytes between pages */
+const GK=['skeletal','muscular','cardio','digest','endocrine','nervous','resp','immune','urinary','female','male','integ'],GP={};
+const glbBuf=k=>GP[k]||(GP[k]=fetch('models/'+k+'.glb').then(r=>r.ok?r.arrayBuffer():null).catch(()=>null));
+const glbLoad=async k=>{const b=await glbBuf(k);if(!b)return null;return new Promise((ok,no)=>new THREE.GLTFLoader().parse(b,'models/',ok,no))};
+function glbPrefetch(){try{const c=navigator.connection||{};if(c.saveData||/^(slow-2g|2g|3g)$/.test(c.effectiveType||''))return}catch(e){}GK.forEach(glbBuf)}
 const esc=t=>String(t).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const md=t=>esc(t).replace(/^### (.*)$/gm,'<h4>$1</h4>').replace(/^#{1,2} (.*)$/gm,'<h3>$1</h3>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^[-*] (.*)(\n|$)/gm,'<li>$1</li>').replace(/(<li>.*?<\/li>)+/g,m=>'<ul>'+m+'</ul>');
 
@@ -157,7 +181,10 @@ function home(){const h=new Date().getHours();$('#hi').textContent=h<12?'Good mo
  $('#tut').style.display=S.tut?'block':'none';$('#fact').textContent=FACTS[new Date().getDate()%FACTS.length]}
 $('#tx').onclick=()=>{S.tut=0;save();home()};
 function boot(){const t=new Date().toISOString().slice(0,10);if(!S.days.includes(t)){S.days.push(t);save()}$('#ob').style.display='none';go('home')}
-$('#go').onclick=()=>{const v=$('#nm').value.trim();if(!v)return $('#nm').focus();S.name=v;save();boot()};
+function showOb(edit){$('#nm').value=S.onboarded?S.name:'';$('#yr').value=S.year||'';$('#go').textContent=edit?'Save':'Let’s start →';$('#ocx').style.display=edit?'inline':'none';$('#ob').style.display='flex';setTimeout(()=>$('#nm').focus(),300)}
+$('#go').onclick=()=>{const v=$('#nm').value.trim();if(!v){$('#nm').style.borderColor='#f55';return $('#nm').focus()}S.name=v;S.year=$('#yr').value;S.onboarded=1;save();try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}boot()};
+$('#ocx').onclick=()=>{$('#ob').style.display='none'};
+$('#chg').onclick=()=>showOb(1);
 $('#nm').onkeydown=e=>e.key==='Enter'&&$('#go').click();
 let tl=1500,ti;const fm=()=>$('#tm').textContent=String(Math.floor(tl/60)).padStart(2,'0')+':'+String(tl%60).padStart(2,'0');
 $('#tg').onclick=()=>{if(ti){clearInterval(ti);ti=0;$('#tg').textContent='Start'}else{$('#tg').textContent='Pause';ti=setInterval(()=>{tl--;fm();if(tl<=0){clearInterval(ti);ti=0;$('#tg').textContent='Start';tl=1500;alert('Focus session done. Take a 5-min break!')}},1000)}};
@@ -276,8 +303,8 @@ $$('#p-study [data-m]').forEach(b=>b.onclick=async()=>{const t=$('#st').value.tr
 window.onerror=m=>{const e=$('#err');e.style.display='block';e.textContent='Error: '+m};
 document.addEventListener('pointerdown',e=>{const t=e.target.closest&&e.target.closest('input,textarea');if(t&&t.type!=='file')setTimeout(()=>t.focus(),0)},true);
 try{fm();draw();nl()}catch(e){}
-if(!S.name){S.name='Ayman';save()}
-if(S.name){boot()}else{$('#ob').style.display='flex';setTimeout(()=>$('#nm').focus(),300)}
+if(S.onboarded&&S.name){boot()}else{showOb(0)}
+setTimeout(glbPrefetch,400);
 </script><script>
 (function(){const s=document.createElement('style');s.textContent='#stage{box-shadow:inset 0 0 80px #ffffff10}#info{animation:f .35s}.chip{transition:.2s}.chip:hover{border-color:#888}.chip:active{transform:scale(.94)}.card{transition:border-color .2s}.card:hover{border-color:#444}#ex{accent-color:#fff;width:110px;padding:0;border:0;vertical-align:middle}';document.head.appendChild(s)})();
 window.info=function(p){$('#info').style.animation='none';void $('#info').offsetWidth;$('#info').style.animation='';
@@ -472,13 +499,12 @@ chips();
 const KEYS=['skeletal','muscular','cardio','digest','endocrine','nervous','resp','immune','urinary','female','male','integ'],CM={skeletal:'bone',muscular:'muscle',integ:'skin'};
 let NORM=null;
 window.loadGLB=async function(){
- if(!THREE.GLTFLoader||!T)return;
+ if(!THREE.GLTFLoader||!T)return;GK.forEach(glbBuf);
  const st=document.createElement('p');st.className='m';st.style.cssText='font-size:12px;margin:6px 0';$('#stage').after(st);let n=0;
  for(const k of KEYS){
   try{
-   const h=await fetch('models/'+k+'.glb',{method:'HEAD'});if(!h.ok)continue;
    st.textContent='Loading atlas model: '+k+'…';
-   const gltf=await new Promise((ok,no)=>new THREE.GLTFLoader().load('models/'+k+'.glb',ok,undefined,no)),root=gltf.scene;
+   const gltf=await glbLoad(k);if(!gltf)continue;const root=gltf.scene;
    const bx=new THREE.Box3().setFromObject(root);
    if(!NORM){const s=bx.getSize(new THREE.Vector3()),c=bx.getCenter(new THREE.Vector3()),sc=11.1/s.y;NORM={sc,x:-c.x*sc,y:-6.2-bx.min.y*sc,z:-c.z*sc}}
    root.scale.setScalar(NORM.sc);root.position.set(NORM.x,NORM.y,NORM.z);T.g.add(root);root.updateMatrixWorld(true);
@@ -549,11 +575,11 @@ async function initAtlas(){
  Object.assign(A,{r,sc,cam,ct,plane});
  A.size=()=>{r.setSize(el.clientWidth,el.clientHeight);cam.aspect=el.clientWidth/el.clientHeight;cam.updateProjectionMatrix()};A.size();addEventListener('resize',A.size);
  (function loop(){requestAnimationFrame(loop);if($('#p-atlas').classList.contains('on')){ct.update();r.render(sc,cam)}})();
- try{INFO=await (await fetch('models/structures.json')).json()}catch(e){}
+ GK.forEach(glbBuf);try{INFO=await (await fetch('models/structures.json')).json()}catch(e){}
  try{CARDS=await (await fetch('models/cards.json')).json()}catch(e){}
  const bar=$('#asys');let n=0;
  for(const k of KEYS){
-  try{const g=await new Promise((ok,no)=>new THREE.GLTFLoader().load('models/'+k+'.glb',ok,undefined,no));
+  try{const g=await glbLoad(k);if(!g)continue;
    const root=g.scene;sc.add(root);A.grp[k]=root;
    root.traverse(m=>{if(m.isMesh){m.material=m.material.clone();m.userData.sys=k;m.userData.bc=m.material.color.clone();m.userData.ins=(INFO[base(m.name)]||'').startsWith('Muscular insertions');A.meshes.push(m);n++}});
    const b=document.createElement('button');b.className='chip'+(OFF[k]?'':' on');b.textContent=SYSN[k];root.visible=!OFF[k];b.onclick=()=>{root.visible=!root.visible;b.classList.toggle('on',root.visible)};bar.appendChild(b);
